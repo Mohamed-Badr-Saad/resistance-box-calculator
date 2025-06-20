@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Resistance Box Calibration</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="p-4">
+    <div class="container">
+        <h2 class="mb-4">Resistance Box Calibration Helper</h2>
+
+        <div class="mb-3">
+            <label for="calibrationInput" class="form-label">Paste Calibration Data (Virtual & Actual Ohm - tab
+                separated):</label>
+            <textarea class="form-control" id="calibrationInput" rows="6"
+                placeholder="e.g.\n100\t100.0774\n90\t90.2707\n..."></textarea>
+        </div>
+
+        <div class="mb-3">
+            <label for="targetInput" class="form-label">Paste Target Actual Ohm Values (one per line):</label>
+            <textarea class="form-control" id="targetInput" rows="4" placeholder="e.g.\n100\n104.8764\n..."></textarea>
+        </div>
+
+        <button class="btn btn-primary mb-4" onclick="calculate()">Find Best Matches</button>
+
+        <div id="output"></div>
+    </div>
+
+    <script>
+        function parseCalibration(input) {
+            return input.trim().split('\n').map(line => {
+                const [virtual, actual] = line.trim().split(/\s+/).map(Number);
+                return { virtual, actual };
+            });
+        }
+
+        function groupByRanges(data) {
+            return {
+                G1: data.filter(d => d.virtual >= 0 && d.virtual <= 0.09),
+                G2: data.filter(d => d.virtual >= 0.1 && d.virtual <= 0.9),
+                G3: data.filter(d => d.virtual >= 1 && d.virtual <= 9),
+                G4: data.filter(d => d.virtual >= 10 && d.virtual <= 90 && d.virtual % 10 === 0),
+                G5: data.filter(d => d.virtual >= 100 && d.virtual <= 900 && d.virtual % 100 === 0)
+            };
+        }
+
+        function findBestCombo(groups, target) {
+            let best = null;
+            let minError = Infinity;
+
+            const G1 = groups.G1, G2 = groups.G2, G3 = groups.G3, G4 = groups.G4, G5 = groups.G5;
+
+            // Use bitmasks to try all combinations of 1-5 groups
+            const groupLists = [G1, G2, G3, G4, G5];
+            for (let mask = 1; mask < (1 << 5); mask++) {
+                const activeGroups = [];
+                for (let i = 0; i < 5; i++) {
+                    if (mask & (1 << i)) {
+                        activeGroups.push(groupLists[i]);
+                    }
+                }
+
+                const recurse = (idx, sum, virtuals, actuals) => {
+                    if (idx === activeGroups.length) {
+                        const error = Math.abs(sum - target);
+                        if (error < minError) {
+                            minError = error;
+                            best = {
+                                actualSum: sum,
+                                virtuals,
+                                error
+                            };
+                        }
+                        return;
+                    }
+
+                    for (const item of activeGroups[idx]) {
+                        recurse(idx + 1, sum + item.actual, [...virtuals, item.virtual], actuals);
+                    }
+                };
+
+                recurse(0, 0, [], []);
+            }
+
+            return best;
+        }
+
+        function calculate() {
+            const calibrationText = document.getElementById('calibrationInput').value;
+            const targetText = document.getElementById('targetInput').value;
+            const calibrationData = parseCalibration(calibrationText);
+            const targets = targetText.trim().split('\n').map(Number);
+            const groups = groupByRanges(calibrationData);
+            const output = document.getElementById('output');
+            output.innerHTML = '';
+
+            const table = document.createElement('table');
+            table.className = 'table table-bordered table-striped';
+            table.innerHTML = `
+        <thead>
+          <tr>
+            <th>Target Actual Ohm</th>
+            <th>Best Actual Sum</th>
+            <th>Virtual Ohms Used</th>
+            <th>Error</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      `;
+
+            for (const target of targets) {
+                const best = findBestCombo(groups, target);
+                const row = document.createElement('tr');
+                row.innerHTML = `
+          <td>${target}</td>
+          <td>${best.actualSum.toFixed(6)}</td>
+          <td>${best.virtuals.join(' + ')}</td>
+          <td>${best.error.toFixed(6)}</td>
+        `;
+                table.querySelector('tbody').appendChild(row);
+            }
+
+            output.appendChild(table);
+        }
+    </script>
+</body>
+
+</html>
