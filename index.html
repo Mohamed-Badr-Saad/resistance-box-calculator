@@ -11,17 +11,21 @@
     <div class="container">
         <h2 class="mb-4">Resistance Box Calibration Helper</h2>
 
-        <div class="mb-3">
-            <label for="calibrationInput" class="form-label">Paste Calibration Data (Virtual & Actual Ohm - tab
-                separated):</label>
-            <textarea class="form-control" id="calibrationInput" rows="6"
-                placeholder="e.g.\n100\t100.0774\n90\t90.2707\n..."></textarea>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="calibrationInput" class="form-label">Paste Calibration Data (Virtual & Actual Ohm - tab
+                    separated):</label>
+                <textarea class="form-control" id="calibrationInput" rows="10"
+                    placeholder="e.g.\n100\t100.0774\n90\t90.2707\n..."></textarea>
+            </div>
+
+            <div class="col-md-6">
+                <label for="targetInput" class="form-label">Paste Target Actual Ohm Values (one per line):</label>
+                <textarea class="form-control" id="targetInput" rows="10"
+                    placeholder="e.g.\n100\n104.8764\n..."></textarea>
+            </div>
         </div>
 
-        <div class="mb-3">
-            <label for="targetInput" class="form-label">Paste Target Actual Ohm Values (one per line):</label>
-            <textarea class="form-control" id="targetInput" rows="4" placeholder="e.g.\n100\n104.8764\n..."></textarea>
-        </div>
 
         <button class="btn btn-primary mb-4" onclick="calculate()">Find Best Matches</button>
 
